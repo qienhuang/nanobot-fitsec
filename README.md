@@ -1,3 +1,9 @@
+> [!NOTE]
+> - **This project is a security-focused fork of HKUDS/nanobot.<br>It preserves nanoBot’s lightweight design while introducing a FIT-based safety runtime.**
+> - **This is not an agent with more tools.<br>It is a runtime-level safety re-architecture focusing on irreversible action control, monitorability, and tempo safety.**
+> - **FIT (Force–Information–Time) is used here as a governance lens and runtime constraint model, not as a replacement for existing agent logic.**
+
+
 <div align="center">
   <img src="nanobot_logo.png" alt="nanobot" width="500">
   <h1>nanobot: Ultra-Lightweight Personal AI Assistant</h1>
