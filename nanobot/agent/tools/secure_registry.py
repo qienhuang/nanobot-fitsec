@@ -16,6 +16,8 @@ from nanobot.fitsec import (
     OmegaLevel,
     Decision,
     GateStatus,
+    PolicyDecision,
+    GateMetrics,
     PolicyDeniedError,
     EmptinessActiveError,
     GateFailedError,
@@ -151,6 +153,28 @@ class SecureToolRegistry:
             EmptinessActiveError: If Emptiness Window blocks the action.
             GateFailedError: If Monitorability Gate fails.
         """
+        def audit_deny(
+            *,
+            rationale: str,
+            omega_level: OmegaLevel,
+            gate_status: GateStatus,
+            error: str,
+            metrics_snapshot: GateMetrics | None = None,
+        ) -> None:
+            self._runtime.audit.log(
+                tool_call=call,
+                manifest=manifest,
+                policy_decision=PolicyDecision(
+                    decision=Decision.DENY,
+                    omega_level=omega_level,
+                    gate_status=gate_status,
+                    rationale=rationale,
+                    metrics_snapshot=metrics_snapshot,
+                ),
+                executed=False,
+                error=error,
+            )
+
         # Build ToolCall for FIT-Sec
         call = ToolCall(
             tool_id=name,
@@ -165,24 +189,43 @@ class SecureToolRegistry:
         if self._runtime.emptiness.is_active:
             if manifest and not self._runtime.emptiness.check_allowed(manifest.omega_level):
                 self._runtime.emptiness.record_blocked_call(call)
+                audit_deny(
+                    rationale="Blocked by Emptiness Window",
+                    omega_level=manifest.omega_level,
+                    gate_status=GateStatus.UNKNOWN,
+                    error="EmptinessActiveError",
+                )
                 raise EmptinessActiveError(
                     f"Emptiness Window active: {name} (O{manifest.omega_level.value}) blocked"
                 )
 
-        # Check Monitorability Gate for O2 tools
+        # Check Monitorability Gate for O1/O2 tools
         gate_status = GateStatus.PASS
-        if manifest and manifest.omega_level == OmegaLevel.OMEGA_2:
+        if manifest and manifest.omega_level in (OmegaLevel.OMEGA_1, OmegaLevel.OMEGA_2):
             gate_status = self._runtime.gate.check()
-            if gate_status not in (GateStatus.PASS, GateStatus.UNKNOWN):
-                raise GateFailedError(
-                    f"Monitorability Gate failed: {self._runtime.gate.get_failure_reason()}"
+            if gate_status not in (GateStatus.PASS, GateStatus.UNKNOWN) and self._runtime.strict_mode:
+                metrics = self._runtime.gate.get_metrics()
+                audit_deny(
+                    rationale=f"Monitorability Gate failed: {gate_status.name}",
+                    omega_level=manifest.omega_level,
+                    gate_status=gate_status,
+                    metrics_snapshot=metrics,
+                    error="GateFailedError",
                 )
+                raise GateFailedError(self._runtime.gate.get_failure_reason() or gate_status.name)
 
         # Evaluate policy
         decision = self._runtime.policy.evaluate(call, manifest, gate_status)
 
         # Policy check
         if decision.decision == Decision.DENY:
+            audit_deny(
+                rationale=decision.rationale or f"Policy denied: {name}",
+                omega_level=decision.omega_level,
+                gate_status=decision.gate_status,
+                metrics_snapshot=decision.metrics_snapshot,
+                error="PolicyDeniedError",
+            )
             raise PolicyDeniedError(decision.rationale or f"Policy denied: {name}")
 
         try:
