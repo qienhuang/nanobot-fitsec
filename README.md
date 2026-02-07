@@ -4,6 +4,7 @@
 > - **FIT (Force–Information–Time) is used here as a governance lens and runtime constraint model, not as a replacement for existing agent logic.**
 
 
+
 <div align="center">
   <img src="nanobot_logo.png" alt="nanobot" width="500">
   <h1>nanobot: Ultra-Lightweight Personal AI Assistant</h1>
@@ -32,6 +33,26 @@
 - **2026-02-04** 🚀 Released v0.1.3.post4 with multi-provider & Docker support! Check [here](https://github.com/HKUDS/nanobot/releases/tag/v0.1.3.post4) for details.
 - **2026-02-03** ⚡ Integrated vLLM for local LLM support and improved natural language task scheduling!
 - **2026-02-02** 🎉 nanobot officially launched! Welcome to try 🐈 nanobot!
+
+## 🔐 FIT-Sec Integration (This Fork)
+
+This fork adds **FIT Framework** security governance to nanoBot:
+
+| Feature | Description |
+|---------|-------------|
+| **Omega Taxonomy** | O0/O1/O2 blast radius classification for tools |
+| **Policy Engine** | Default-deny for high-risk (O2) operations |
+| **Emptiness Window** | Safety mode preserving cognition, removing commit power |
+| **Audit Trail** | Append-only JSONL logging of all tool decisions |
+
+```python
+from nanobot.agent.secure_loop import SecureAgentLoop
+
+agent = SecureAgentLoop(bus, provider, workspace, strict_mode=True)
+agent.grant_tool_approval("exec", duration_seconds=300)  # Time-bounded O2 approval
+```
+
+See **[FITSEC.md](./FITSEC.md)** for full documentation.
 
 ## Key Features of nanobot:
 
